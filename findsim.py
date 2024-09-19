@@ -135,9 +135,9 @@ class Lexicon:
           raise ValueError(f"Word '{word}' not in the lexicon.")
 
         # Get the embedding of the query word
-
-        # Adjust embedding with 'plus' and 'minus' words
         query_embedding = self.embeddings[self.word_to_index[word]]
+        # Adjust embedding with 'plus' and 'minus' words
+        
         if plus and minus:
           if plus not in self.word_to_index or minus not in self.word_to_index:
             raise ValueError(f"Word '{plus}' or '{minus}' not in the lexicon.")
@@ -151,6 +151,10 @@ class Lexicon:
         )
         # Exclude the query word itself by setting its similarity to -infinity
         all_similarities[self.word_to_index[word]] = -float('inf')
+        if plus:
+          all_similarities[self.word_to_index[plus]] = -float('inf')
+        if minus:
+          all_similarities[self.word_to_index[minus]] = -float('inf')
         # Get the top 10 most similar words
         top_10_similarities = torch.topk(all_similarities, 10).indices
         similar_words = [list(self.word_to_index.keys())[idx] for idx in top_10_similarities]
