@@ -158,13 +158,7 @@ class Lexicon:
         return similar_words
 
 
-        if (minus is None) != (plus is None):  # != is the XOR operation!
-            raise TypeError("Must include both of `plus` and `minus` or neither.")
-        # Keep going!
-        # Be sure that you use fast, batched computations
-        # instead of looping over the rows. If you use a loop or a comprehension
-        # in this function, you've probably made a mistake.
-        return []
+        
 
 
 def main():
