@@ -105,46 +105,59 @@ class Lexicon:
     >>> my_lexicon.find_similar_words(bagpipe)
     """
 
-    def __init__(self) -> None:
+    def __init__(self, word_to_index: dict, embeddings: torch.Tensor) -> None:
         """Load information into coupled word-index mapping and embedding matrix."""
-        # FINISH THIS FUNCTION
-
-        # Store your stuff! Both the word-index mapping and the embedding matrix.
-        #
-        # Do something with this size info?
-        # PyTorch's torch.Tensor objects rely on fixed-size arrays in memory.
-        # One of the worst things you can do for efficiency is
-        # append row-by-row, like you would with a Python list.
-        #
-        # Probably make the entire list all at once, then convert to a torch.Tensor.
-        # Otherwise, make the torch.Tensor and overwrite its contents row-by-row.
+        self.word_to_index = word_to_index
+        self.embeddings = embeddings
 
     @classmethod
     def from_file(cls, file: Path) -> Lexicon:
-        # FINISH THIS FUNCTION
+        word_to_index = {}
+        embeddings_list = []
 
         with open(file) as f:
             first_line = next(f)  # Peel off the special first line.
-            for line in f:  # All of the other lines are regular.
-                pass  # `pass` is a placeholder. Replace with real code!
+            for idx, line in enumerate(f):
+              parts = line.strip().split()
+              word = parts[0]
+              embedding = list(map(float, parts[1:]))
+              word_to_index[word] = idx
+              embeddings_list.append(embedding)
 
-        lexicon = Lexicon()  # Maybe put args here. Maybe follow Builder pattern.
-        return lexicon
+        embeddings_tensor = torch.tensor(embeddings_list)
+        return cls(word_to_index, embeddings_tensor)
 
     def find_similar_words(
         self, word: str, *, plus: Optional[str] = None, minus: Optional[str] = None
     ) -> List[str]:
         """Find most similar words, in terms of embeddings, to a query."""
-        # FINISH THIS FUNCTION
+        if word not in self.word_to_index:
+          raise ValueError(f"Word '{word}' not in the lexicon.")
 
-        # The star above forces you to use `plus` and `minus` only
-        # as named arguments. This helps avoid mixups or readability
-        # problems where you forget which comes first.
-        #
-        # We've also given `plus` and `minus` the type annotation
-        # Optional[str]. This means that the argument may be None, or
-        # it may be a string. If you don't provide these, it'll automatically
-        # use the default value we provided: None.
+        # Get the embedding of the query word
+
+        # Adjust embedding with 'plus' and 'minus' words
+        query_embedding = self.embeddings[self.word_to_index[word]]
+        if plus and minus:
+          if plus not in self.word_to_index or minus not in self.word_to_index:
+            raise ValueError(f"Word '{plus}' or '{minus}' not in the lexicon.")
+          plus_embedding = self.embeddings[self.word_to_index[plus]]
+          minus_embedding = self.embeddings[self.word_to_index[minus]]
+          query_embedding = query_embedding + plus_embedding - minus_embedding
+
+        # Compute cosine similarities
+        all_similarities = torch.nn.functional.cosine_similarity(
+          query_embedding.unsqueeze(0), self.embeddings, dim=1
+        )
+        # Exclude the query word itself by setting its similarity to -infinity
+        all_similarities[self.word_to_index[word]] = -float('inf')
+        # Get the top 10 most similar words
+        top_10_similarities = torch.topk(all_similarities, 10).indices
+        similar_words = [list(self.word_to_index.keys())[idx] for idx in top_10_similarities]
+
+        return similar_words
+
+
         if (minus is None) != (plus is None):  # != is the XOR operation!
             raise TypeError("Must include both of `plus` and `minus` or neither.")
         # Keep going!
